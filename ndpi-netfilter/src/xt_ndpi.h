@@ -88,8 +88,8 @@ struct xt_ndpi_tginfo {
 "instagram",       "microsoft",            "starcraft",        "teredo",          "hotspot_shield",\
 "hep",             "free_217",             "ocs",              "office_365",      "cloudflare",\
 "ms_one_drive",    "mqtt",                 "rx",               "free_224",        "opendns",\
-"git",             "drda"
-#define NDPI_PROTOCOL_MAXNUM 227
+"git",             "drda",                 "csgo"
+#define NDPI_PROTOCOL_MAXNUM 228
 #endif
 
 #endif /* _LINUX_NETFILTER_XT_NDPI_H */
