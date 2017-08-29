@@ -59,6 +59,7 @@ typedef struct ndpi_flow_info {
   u_int64_t last_seen;
   u_int64_t bytes;
   u_int32_t packets;
+  u_int32_t nf_mark;
   
   // result only, not used for flow identification
   ndpi_protocol detected_protocol;

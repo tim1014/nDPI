@@ -450,9 +450,7 @@ void ndpi_search_bittorrent(struct ndpi_detection_module_struct *ndpi_struct, st
 	    goto bittorrent_found;
 	  } else if((v0_flags < 6 /* ST_NUM_STATES */) && (v0_extension < 3 /* EXT_NUM_EXT */)) {
 	    u_int32_t ts = ntohl(*((u_int32_t*)&(packet->payload[4])));
-	    u_int32_t now;
-
-	    now = (u_int32_t)time(NULL);
+	    u_int32_t now = flow->packet.tick_timestamp;
 
 	    if((ts < (now+86400)) && (ts > (now-86400))) {
 	      bt_proto = ndpi_strnstr((const char *)&packet->payload[20], "BitTorrent protocol", packet->payload_packet_len-20);

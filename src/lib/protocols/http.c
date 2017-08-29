@@ -609,6 +609,9 @@ static void ndpi_check_http_tcp(struct ndpi_detection_module_struct *ndpi_struct
     if(packet->line[0].len >= (9 + filename_start)
         && memcmp(&packet->line[0].ptr[packet->line[0].len - 9], " HTTP/1.", 8) == 0) {
 
+      int x = 1;
+      int a;
+
       packet->http_url_name.ptr = &packet->payload[filename_start];
       packet->http_url_name.len = packet->line[0].len - (filename_start + 9);
 
@@ -623,7 +626,6 @@ static void ndpi_check_http_tcp(struct ndpi_detection_module_struct *ndpi_struct
       }
 
       /* Check for additional field introduced by Steam */
-      int x = 1;
       if((memcmp(packet->line[x].ptr, "x-steam-sid", 11)) == 0) {
 	ndpi_int_http_add_connection(ndpi_struct, flow, NDPI_PROTOCOL_STEAM);
 	check_content_type_and_change_protocol(ndpi_struct, flow);
@@ -668,7 +670,6 @@ static void ndpi_check_http_tcp(struct ndpi_detection_module_struct *ndpi_struct
       }
 
       /* Check for 1kxun packet */
-      int a;
       for (a = 0; a < packet->parsed_lines; a++) {
 	if(packet->line[a].len >= 14 && (memcmp(packet->line[a].ptr, "Client-Source:", 14)) == 0) {
 	  if((memcmp(packet->line[a].ptr+15, "1kxun", 5)) == 0) {

@@ -24,8 +24,6 @@
 #ifndef __NDPI_TYPEDEFS_H__
 #define __NDPI_TYPEDEFS_H__
 
-#include "ndpi_define.h"
-
 #define BT_ANNOUNCE
 #define SNAP_EXT
 
@@ -46,6 +44,9 @@ typedef enum
     ndpi_endorder,
     ndpi_leaf
   } ndpi_VISIT;
+
+#include "ndpi_define.h"
+
 
 /* NDPI_NODE */
 typedef struct node_t
@@ -289,7 +290,7 @@ typedef union
 /* ************************************************************ */
 
 #ifdef NDPI_PROTOCOL_BITTORRENT
-
+#ifndef __KERNEL__
 typedef struct spinlock {
   volatile int    val;
 } spinlock_t;
@@ -297,6 +298,7 @@ typedef struct spinlock {
 typedef struct atomic {
   volatile int counter;
 } atomic_t;
+#endif
 
 struct hash_ip4p_node {
   struct hash_ip4p_node   *next,*prev;
@@ -317,7 +319,7 @@ struct hash_ip4p_table {
   int			  ipv6;
   spinlock_t              lock;
   atomic_t                count;
-  struct hash_ip4p        tbl;
+  struct hash_ip4p        tbl[0];
 };
 
 struct bt_announce {              // 192 bytes
@@ -895,7 +897,9 @@ struct ndpi_flow_struct {
   /* init parameter, internal used to set up timestamp,... */
   u_int16_t guessed_protocol_id, guessed_host_protocol_id;
 
-  u_int8_t protocol_id_already_guessed:1, host_already_guessed:1, init_finished:1, setup_packet_direction:1, packet_direction:1;
+  u_int8_t protocol_id_already_guessed:1, host_already_guessed:1, init_finished:1, setup_packet_direction:1, packet_direction:1,
+	   no_cache_protocol:1,
+	   tcp_data:1;
 
   /*
      if ndpi_struct->direction_detect_disable == 1

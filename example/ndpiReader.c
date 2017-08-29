@@ -659,6 +659,17 @@ static void printFlow(u_int16_t thread_id, struct ndpi_flow_info *flow) {
 	      flow->detected_protocol.app_protocol,
 	      ndpi_get_proto_name(ndpi_thread_info[thread_id].workflow->ndpi_struct, flow->detected_protocol.app_protocol));
 
+    if(flow->nf_mark) {
+      	    char buf[64];
+	    ndpi_protocol nfproto = { .app_protocol=flow->nf_mark >> 16,
+		    .master_protocol = flow->nf_mark & 0xffff };
+	    if(memcmp((void *)&nfproto,(void *)&flow->detected_protocol,sizeof(nfproto)))
+		fprintf(out, "[NF:%x.%x:%x.%x:%s]",nfproto.app_protocol,nfproto.master_protocol,
+			    flow->detected_protocol.app_protocol,flow->detected_protocol.master_protocol,
+			 ndpi_protocol2name(ndpi_thread_info[thread_id].workflow->ndpi_struct, nfproto, buf, sizeof(buf)));
+//		else  fprintf(out, "[NF:OK]");
+    }// else fprintf(out, "[NONF]");
+
     fprintf(out, "[%u pkts/%llu bytes]",
 	    flow->packets, (long long unsigned int) flow->bytes);
 
@@ -1670,6 +1681,7 @@ static void breakPcapLoop(u_int16_t thread_id) {
   if(ndpi_thread_info[thread_id].workflow->pcap_handle != NULL) {
     pcap_breakloop(ndpi_thread_info[thread_id].workflow->pcap_handle);
   }
+  pthread_kill(ndpi_thread_info[thread_id].pthread,SIGINT);
 }
 
 /**
@@ -1737,7 +1749,7 @@ static void configurePcapHandle(pcap_t * pcap_handle) {
  */
 static pcap_t * openPcapFileOrDevice(u_int16_t thread_id, const u_char * pcap_file) {
 
-  u_int snaplen = 1536;
+  u_int snaplen = 4000;
   int promisc = 1;
   char pcap_error_buffer[PCAP_ERRBUF_SIZE];
   pcap_t * pcap_handle = NULL;
@@ -1793,6 +1805,7 @@ static void pcap_process_packet(u_char *args,
 				const struct pcap_pkthdr *header,
 				const u_char *packet) {
   struct ndpi_proto p;
+  u_int32_t h_caplen,h_len;
   u_int16_t thread_id = *((u_int16_t*)args);
 
   /* allocate an exact size buffer to check overflows */
@@ -2060,7 +2073,7 @@ int main(int argc, char **argv) {
   }
 
   signal(SIGINT, sigproc);
-
+  siginterrupt(SIGINT,1);
   for(i=0; i<num_loops; i++)
     test_lib();
 

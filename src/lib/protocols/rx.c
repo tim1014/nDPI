@@ -77,6 +77,7 @@ void ndpi_check_rx(struct ndpi_detection_module_struct *ndpi_struct,
                    struct ndpi_flow_struct *flow)
 {
   struct ndpi_packet_struct *packet = &flow->packet;
+  struct ndpi_rx_header *header;
   u_int32_t payload_len = packet->payload_packet_len;
 
   NDPI_LOG(NDPI_PROTOCOL_RX, ndpi_struct, NDPI_LOG_DEBUG, "RX: pck: %d, dir[0]: %d, dir[1]: %d\n",
@@ -89,7 +90,7 @@ void ndpi_check_rx(struct ndpi_detection_module_struct *ndpi_struct,
     return;
   }
   
-  struct ndpi_rx_header *header = (struct ndpi_rx_header*) packet->payload;
+  header = (struct ndpi_rx_header*) packet->payload;
 
   /**
    * Useless check: a session could be detected also after it starts 

@@ -17,7 +17,9 @@
  * If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#ifndef __KERNEL__
 #include <stdlib.h>
+#endif
 #include "ndpi_api.h"
 
 #ifdef NDPI_PROTOCOL_GIT

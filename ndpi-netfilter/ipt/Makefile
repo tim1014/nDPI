@@ -1,5 +1,4 @@
-NDPI_PATH2 := ${NDPI_PATH}/src
-NDPI_SRC := ..
+NDPI_SRC := ../../src
 NDPI_PRO := ${NDPI_SRC}/lib/protocols
 XTBL := $(shell pkg-config --variable=xtlibdir xtables)
 

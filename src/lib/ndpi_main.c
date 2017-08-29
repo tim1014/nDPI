@@ -21,20 +21,29 @@
  *
  */
 
+#ifndef __KERNEL__
 #include <stdlib.h>
 #include <errno.h>
-#include "ahocorasick.h"
-#include "ndpi_api.h"
-#include "../../config.h"
 
 #include <time.h>
 #ifndef WIN32
 #include <unistd.h>
 #endif
 
+#include <stddef.h>
+#endif
+
+#include "ahocorasick.h"
+#include "ndpi_api.h"
+#include "../../config.h"
+
+
 #include "ndpi_content_match.c.inc"
-#include "third_party/include/ndpi_patricia.h"
+//#include "third_party/include/ndpi_patricia.h"
 #include "third_party/src/ndpi_patricia.c"
+#ifdef __KERNEL__
+#include "ndpi_kernel_compat.c"
+#endif
 
 
 /* implementation of the punycode check function */
@@ -218,7 +227,7 @@ static void  (*_ndpi_flow_free)(void *ptr);
 
 static void *(*_ndpi_malloc)(size_t size);
 static void  (*_ndpi_free)(void *ptr);
-
+static u_int32_t _ticks_per_second = 1000;
 /* ****************************************** */
 
 #ifdef WIN32
@@ -312,7 +321,13 @@ static int removeDefaultPort(ndpi_port_range *range,
 
 /* ****************************************** */
 
-void * ndpi_malloc(size_t size) { return(_ndpi_malloc ? _ndpi_malloc(size) : malloc(size)); }
+void * ndpi_malloc(size_t size) { return(_ndpi_malloc ? _ndpi_malloc(size) :
+#ifndef __KERNEL__
+		malloc(size)
+#else
+		NULL
+#endif
+); }
 void * ndpi_flow_malloc(size_t size) { return(_ndpi_flow_malloc ? _ndpi_flow_malloc(size) : ndpi_malloc(size)); }
 
 /* ****************************************** */
@@ -330,7 +345,14 @@ void * ndpi_calloc(unsigned long count, size_t size)
 
 /* ****************************************** */
 
-void ndpi_free(void *ptr) { if(_ndpi_free) _ndpi_free(ptr); else free(ptr); }
+void ndpi_free(void *ptr) {
+	if(_ndpi_free) _ndpi_free(ptr); else 
+#ifndef __KERNEL__
+		free(ptr);
+#else
+		assert(_ndpi_free);
+#endif
+}
 void ndpi_flow_free(void *ptr) { if(_ndpi_flow_free) _ndpi_flow_free(ptr); else ndpi_free_flow((struct ndpi_flow_struct *) ptr); }
 
 /* ****************************************** */
@@ -1772,6 +1794,9 @@ static int ndpi_add_host_ip_subprotocol(struct ndpi_detection_module_struct *ndp
 
 #endif
 
+void set_ndpi_ticks_per_second(u_int32_t ticks_per_second) {
+	_ticks_per_second = ticks_per_second;
+}
 void set_ndpi_malloc(void* (*__ndpi_malloc)(size_t size)) { _ndpi_malloc = __ndpi_malloc; }
 void set_ndpi_flow_malloc(void* (*__ndpi_flow_malloc)(size_t size)) { _ndpi_flow_malloc = __ndpi_flow_malloc; }
 
@@ -1817,9 +1842,11 @@ struct ndpi_detection_module_struct *ndpi_init_detection_module(void) {
   }
   memset(ndpi_str, 0, sizeof(struct ndpi_detection_module_struct));
 
+#ifndef __KERNEL__
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
   set_ndpi_debug_function(ndpi_str, (ndpi_debug_function_ptr)ndpi_debug_printf);
 #endif /* NDPI_ENABLE_DEBUG_MESSAGES */
+#endif
 
   if((ndpi_str->protocols_ptree = ndpi_New_Patricia(32 /* IPv4 */)) != NULL)
     ndpi_init_ptree_ipv4(ndpi_str, ndpi_str->protocols_ptree, host_protocol_list);
@@ -1829,7 +1856,7 @@ struct ndpi_detection_module_struct *ndpi_init_detection_module(void) {
   ndpi_str->user_data = NULL;
 #endif
 
-  ndpi_str->ticks_per_second = 1000; /* ndpi_str->ticks_per_second */
+  ndpi_str->ticks_per_second = _ticks_per_second; /* ndpi_str->ticks_per_second */
   ndpi_str->tcp_max_retransmission_window_size = NDPI_DEFAULT_MAX_TCP_RETRANSMISSION_WINDOW_SIZE;
   ndpi_str->directconnect_connection_ip_tick_timeout =
     NDPI_DIRECTCONNECT_CONNECTION_IP_TICK_TIMEOUT * ndpi_str->ticks_per_second;
@@ -2205,6 +2232,9 @@ int ndpi_handle_rule(struct ndpi_detection_module_struct *ndpi_mod, char* rule, 
 
 */
 int ndpi_load_protocols_file(struct ndpi_detection_module_struct *ndpi_mod, char* path) {
+#ifdef __KERNEL__
+  return -1;
+#else
 
   FILE *fd = fopen(path, "r");
   int i;
@@ -2231,6 +2261,7 @@ int ndpi_load_protocols_file(struct ndpi_detection_module_struct *ndpi_mod, char
   fclose(fd);
 
   return(0);
+#endif
 }
 
 /* ntop */
@@ -3753,7 +3784,7 @@ void ndpi_parse_packet_line_info(struct ndpi_detection_module_struct *ndpi_struc
   packet->line[packet->parsed_lines].ptr = packet->payload;
   packet->line[packet->parsed_lines].len = 0;
 
-  for(a = 0; a < end-1 /* This because get_u_int16_t(packet->payload, a) reads 2 bytes */; a++) {
+  for(a = 0; a <= end-1 /* This because get_u_int16_t(packet->payload, a) reads 2 bytes */; a++) {
     if(get_u_int16_t(packet->payload, a) == ntohs(0x0d0a)) {
       packet->line[packet->parsed_lines].len = (u_int16_t)(((unsigned long) &packet->payload[a]) - ((unsigned long) packet->line[packet->parsed_lines].ptr));
 
@@ -4734,7 +4765,9 @@ void ndpi_free_flow(struct ndpi_flow_struct *flow) {
       ndpi_free(flow->http.url);
     if(flow->http.content_type)
       ndpi_free(flow->http.content_type);
+#ifndef __KERNEL__
     ndpi_free(flow);
+#endif
   }
 }
 

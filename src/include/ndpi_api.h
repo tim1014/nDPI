@@ -617,6 +617,7 @@ extern "C" {
 
 
   /* Utility functions to set ndpi malloc/free/print wrappers */
+  void set_ndpi_ticks_per_second(u_int32_t ticks_per_second);
   void set_ndpi_malloc(void* (*__ndpi_malloc)(size_t size));
   void set_ndpi_free(void  (*__ndpi_free)(void *ptr));
   void set_ndpi_flow_malloc(void* (*__ndpi_flow_malloc)(size_t size));

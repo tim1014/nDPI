@@ -61,8 +61,10 @@ static void ndpi_int_mqtt_add_connection (struct ndpi_detection_module_struct *n
 void ndpi_search_mqtt (struct ndpi_detection_module_struct *ndpi_struct,
 		struct ndpi_flow_struct *flow)
 {
-	NDPI_LOG(NDPI_PROTOCOL_MQTT, ndpi_struct, NDPI_LOG_DEBUG, "Mqtt search called...\n");
 	struct ndpi_packet_struct *packet = &flow->packet;
+	u_int8_t rl,pt,flags;
+
+	NDPI_LOG(NDPI_PROTOCOL_MQTT, ndpi_struct, NDPI_LOG_DEBUG, "Mqtt search called...\n");
 	if (packet->detected_protocol_stack[0] != NDPI_PROTOCOL_UNKNOWN) {
 		return;
 	}
@@ -86,14 +88,14 @@ void ndpi_search_mqtt (struct ndpi_detection_module_struct *ndpi_struct,
 		return;
 	}
 	// we extract the remaining length
-	u_int8_t rl = (u_int8_t) (packet->payload[1]);
+	rl = (u_int8_t) (packet->payload[1]);
 	if (packet->payload_packet_len != (rl + 2)) {
 		NDPI_LOG(NDPI_PROTOCOL_MQTT, ndpi_struct, NDPI_LOG_DEBUG, "Excluding Mqtt .. packet size exceeded!\n");
 		NDPI_ADD_PROTOCOL_TO_BITMASK(flow->excluded_protocol_bitmask, NDPI_PROTOCOL_MQTT);
 		return;
 	}
 	// we extract the packet type
-	u_int8_t pt = (u_int8_t) ((packet->payload[0] & 0xF0) >> 4);
+	pt = (u_int8_t) ((packet->payload[0] & 0xF0) >> 4);
 	NDPI_LOG(NDPI_PROTOCOL_MQTT, ndpi_struct, NDPI_LOG_DEBUG,"====>>>> Mqtt packet type: [%d]\n",pt);
 	if ((pt == 0) || (pt == 15)) {
 		NDPI_LOG(NDPI_PROTOCOL_MQTT, ndpi_struct, NDPI_LOG_DEBUG, "Excluding Mqtt .. invalid packet type!\n");
@@ -101,7 +103,7 @@ void ndpi_search_mqtt (struct ndpi_detection_module_struct *ndpi_struct,
 		return;
 	}
 	// we extract the flags
-	u_int8_t flags = (u_int8_t) (packet->payload[0] & 0x0F);
+	flags = (u_int8_t) (packet->payload[0] & 0x0F);
 	NDPI_LOG(NDPI_PROTOCOL_MQTT, ndpi_struct, NDPI_LOG_DEBUG,"====>>>> Mqtt flags type: [%d]\n",flags);
 	// first stage verification
 	if (((pt == CONNECT) || (pt == CONNACK) || (pt == PUBACK) || (pt == PUBREC) ||
