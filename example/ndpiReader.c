@@ -49,9 +49,11 @@
 #ifdef HAVE_JSON_C
 #include <json.h>
 #endif
+#define DEBUG_TRACE 1
 
 #include "ndpi_util.h"
 
+extern int bt_parse_debug;
 /** Client parameters **/
 static char *_pcap_file[MAX_NUM_READER_THREADS]; /**< Ingress pcap file/interfaces */
 static FILE *playlist_fp[MAX_NUM_READER_THREADS] = { NULL }; /**< Ingress playlist */
@@ -443,11 +445,13 @@ static void parseOptions(int argc, char **argv) {
 
     case 'v':
       verbose = atoi(optarg);
+      bt_parse_debug = verbose > 1;
       break;
 
     case 'V':
       printf("%d\n",atoi(optarg) );
       nDPI_traceLevel  = atoi(optarg);
+      ndpi_debug_print_level = nDPI_traceLevel;
       break;
 
     case 'h':
@@ -1098,6 +1102,9 @@ static void setupDetection(u_int16_t thread_id, pcap_t * pcap_handle) {
   // enable all protocols
   NDPI_BITMASK_SET_ALL(all);
   ndpi_set_protocol_detection_bitmask2(ndpi_thread_info[thread_id].workflow->ndpi_struct, &all);
+#ifdef NDPI_PROTOCOL_BITTORRENT
+   ndpi_bittorrent_init(ndpi_thread_info[thread_id].workflow->ndpi_struct,9*1024,2100,0);
+#endif
 
   // clear memory for results
   memset(ndpi_thread_info[thread_id].workflow->stats.protocol_counter, 0, sizeof(ndpi_thread_info[thread_id].workflow->stats.protocol_counter));
@@ -2060,6 +2067,7 @@ int main(int argc, char **argv) {
   memset(ndpi_thread_info, 0, sizeof(ndpi_thread_info));
 
   parseOptions(argc, argv);
+  trace = nDPI_traceLevel > 2 ? stderr : NULL;
 
   if((!json_flag) && (!quiet_mode)) {
     printf("\n-----------------------------------------------------------\n"

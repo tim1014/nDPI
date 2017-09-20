@@ -45,6 +45,7 @@
 #include "ndpi_kernel_compat.c"
 #endif
 
+int ndpi_debug_print_level = 0;
 
 /* implementation of the punycode check function */
 int check_punycode_string(char * buffer , int len)
@@ -1808,12 +1809,16 @@ void set_ndpi_flow_malloc(void* (*__ndpi_flow_malloc)(size_t size)) { _ndpi_flow
 void set_ndpi_free(void  (*__ndpi_free)(void *ptr))       { _ndpi_free = __ndpi_free; }
 void set_ndpi_flow_free(void  (*__ndpi_flow_free)(void *ptr))       { _ndpi_flow_free = __ndpi_flow_free; }
 
+#ifndef __KERNEL__
 void ndpi_debug_printf(unsigned int proto, struct ndpi_detection_module_struct *ndpi_str, ndpi_log_level_t log_level, const char * format, ...)
 {
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
   va_list args;
 #define MAX_STR_LEN 120
   char str[MAX_STR_LEN];
+
+  if(log_level > ndpi_debug_print_level) return;
+
   va_start(args, format);
   vsprintf(str, format, args);
   va_end(args);
@@ -1821,12 +1826,13 @@ void ndpi_debug_printf(unsigned int proto, struct ndpi_detection_module_struct *
   if (ndpi_str != NULL) {
     char proto_name[64];
     snprintf(proto_name, sizeof(proto_name), "%s", ndpi_get_proto_name(ndpi_str, proto));
-    printf("%s:%s:%u - Proto: %s, %s\n", ndpi_str->ndpi_debug_print_file, ndpi_str->ndpi_debug_print_function, ndpi_str->ndpi_debug_print_line, proto_name, str);
+    fprintf(stderr,"%s:%s:%u - Proto: %s, %s\n", ndpi_str->ndpi_debug_print_file, ndpi_str->ndpi_debug_print_function, ndpi_str->ndpi_debug_print_line, proto_name, str);
   } else {
-    printf("Proto: %u, %s\n", proto, str);
+    fprintf(stderr,"Proto: %u, %s\n", proto, str);
   }
 #endif
 }
+#endif
 
 void set_ndpi_debug_function(struct ndpi_detection_module_struct *ndpi_str, ndpi_debug_function_ptr ndpi_debug_printf) {
 #ifdef NDPI_ENABLE_DEBUG_MESSAGES
@@ -1972,7 +1978,9 @@ void ndpi_exit_detection_module(struct ndpi_detection_module_struct *ndpi_struct
       if(ndpi_struct->proto_defaults[i].protoName)
 	ndpi_free(ndpi_struct->proto_defaults[i].protoName);
     }
-
+#ifdef NDPI_PROTOCOL_BITTORRENT
+    ndpi_bittorrent_done(ndpi_struct);
+#endif
     if(ndpi_struct->protocols_ptree)
       ndpi_Destroy_Patricia((patricia_tree_t*)ndpi_struct->protocols_ptree, free_ptree_data);
 
@@ -2775,7 +2783,7 @@ void ndpi_set_protocol_detection_bitmask2(struct ndpi_detection_module_struct *n
 	& (NDPI_SELECTION_BITMASK_PROTOCOL_INT_TCP |
 	   NDPI_SELECTION_BITMASK_PROTOCOL_INT_TCP_OR_UDP |
 	   NDPI_SELECTION_BITMASK_PROTOCOL_COMPLETE_TRAFFIC)) != 0) {
-      NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
+      if(0) NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
 	       "callback_buffer_tcp_payload, adding buffer %u as entry %u\n", a,
 	       ndpi_struct->callback_buffer_size_tcp_payload);
 
@@ -2785,7 +2793,7 @@ void ndpi_set_protocol_detection_bitmask2(struct ndpi_detection_module_struct *n
 
       if((ndpi_struct->
 	  callback_buffer[a].ndpi_selection_bitmask & NDPI_SELECTION_BITMASK_PROTOCOL_HAS_PAYLOAD) == 0) {
-	NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
+	if(0) NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
 		 "\tcallback_buffer_tcp_no_payload, additional adding buffer %u to no_payload process\n", a);
 
 	memcpy(&ndpi_struct->callback_buffer_tcp_no_payload
@@ -2802,7 +2810,7 @@ void ndpi_set_protocol_detection_bitmask2(struct ndpi_detection_module_struct *n
 								  NDPI_SELECTION_BITMASK_PROTOCOL_INT_TCP_OR_UDP |
 								  NDPI_SELECTION_BITMASK_PROTOCOL_COMPLETE_TRAFFIC))
        != 0) {
-      NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
+      if(0) NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
 	       "callback_buffer_size_udp: adding buffer : %u as entry %u\n", a, ndpi_struct->callback_buffer_size_udp);
 
       memcpy(&ndpi_struct->callback_buffer_udp[ndpi_struct->callback_buffer_size_udp],
@@ -2819,7 +2827,7 @@ void ndpi_set_protocol_detection_bitmask2(struct ndpi_detection_module_struct *n
        == 0
        || (ndpi_struct->
 	   callback_buffer[a].ndpi_selection_bitmask & NDPI_SELECTION_BITMASK_PROTOCOL_COMPLETE_TRAFFIC) != 0) {
-      NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
+      if(0) NDPI_LOG(NDPI_PROTOCOL_UNKNOWN, ndpi_struct, NDPI_LOG_DEBUG,
 	       "callback_buffer_non_tcp_udp: adding buffer : %u as entry %u\n", a, ndpi_struct->callback_buffer_size_non_tcp_udp);
 
       memcpy(&ndpi_struct->callback_buffer_non_tcp_udp[ndpi_struct->callback_buffer_size_non_tcp_udp],
@@ -3132,6 +3140,7 @@ void ndpi_connection_tracking(struct ndpi_detection_module_struct *ndpi_struct,
   }
 
   packet->packet_lines_parsed_complete = 0;
+  packet->hdr_line = NULL;
   if(flow == NULL)
     return;
 
@@ -3475,7 +3484,8 @@ ndpi_protocol ndpi_detection_process_packet(struct ndpi_detection_module_struct 
     return(ret);
 
   if(flow->server_id == NULL) flow->server_id = dst; /* Default */
-  if(flow->detected_protocol_stack[0] != NDPI_PROTOCOL_UNKNOWN)
+  if(flow->detected_protocol_stack[0] != NDPI_PROTOCOL_UNKNOWN &&
+     !flow->no_cache_protocol)
     goto ret_protocols;
 
   /* need at least 20 bytes for ip header */
@@ -3746,6 +3756,8 @@ void ndpi_parse_packet_line_info(struct ndpi_detection_module_struct *ndpi_struc
   u_int16_t end = packet->payload_packet_len - 1;
   if(packet->packet_lines_parsed_complete != 0)
     return;
+
+  packet->hdr_line = &packet->host_line;
 
   packet->packet_lines_parsed_complete = 1;
   packet->parsed_lines = 0;

@@ -333,10 +333,6 @@ static	struct kmem_cache *osdpi_flow_cache = NULL;
 static	struct kmem_cache *osdpi_id_cache = NULL;
 struct kmem_cache *bt_port_cache = NULL;
 
-int  ndpi_bittorrent_gc(struct hash_ip4p_table *ht,int key,time_t now) {
-	return 0;
-}
-
 /* debug functions */
 
 static void debug_printf(u32 protocol, void *id_struct,
@@ -2459,10 +2455,12 @@ static void __net_exit ndpi_net_exit(struct net *net)
 	net->ct.labels_used--;
 #endif
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 12, 1)
-	nf_ct_iterate_cleanup(net, __ndpi_free_flow, n);
-#else
+#if   LINUX_VERSION_CODE >= KERNEL_VERSION(4, 13, 0)
+	nf_ct_iterate_cleanup_net(net, __ndpi_free_flow, n, 0 ,0);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0)
 	nf_ct_iterate_cleanup(net, __ndpi_free_flow, n, 0 ,0);
+#else /* < 3.12 */
+	nf_ct_iterate_cleanup(net, __ndpi_free_flow, n);
 #endif
 	/* free all objects before destroying caches */
 	
@@ -2531,7 +2529,7 @@ static int __net_init ndpi_net_init(struct net *net)
 	if(bt_hash_size > 512) bt_hash_size = 512;
 	if(bt_log_size > 512) bt_log_size = 512;
 	if(bt_log_size < 32 ) bt_log_size = 0;
-//	ndpi_bittorrent_init(n->ndpi_struct,bt_hash_size*1024,bt_hash_tmo,bt_log_size);
+	ndpi_bittorrent_init(n->ndpi_struct,bt_hash_size*1024,bt_hash_tmo,bt_log_size);
 
 	n->n_hash = -1;
 

@@ -464,8 +464,9 @@ void process_ndpi_collected_info(struct ndpi_workflow * workflow, struct ndpi_fl
       if (workflow->__flow_detected_callback != NULL)
 	workflow->__flow_detected_callback(workflow, flow, workflow->__flow_detected_udata);
     }
-
-    ndpi_free_flow_info_half(flow);
+    if(flow->ndpi_flow && !flow->ndpi_flow->no_cache_protocol) {
+	ndpi_free_flow_info_half(flow);
+    }
   }
 }
 
@@ -525,7 +526,10 @@ static struct ndpi_proto packet_processing(struct ndpi_workflow * workflow,
   if(nf_mark) flow->nf_mark = nf_mark;
 
   /* Protocol already detected */
-  if(flow->detection_completed) return(flow->detected_protocol);
+  if(flow->detection_completed) {
+	if(!flow->ndpi_flow || flow->ndpi_flow->no_cache_protocol)
+			return(flow->detected_protocol);
+  }
 
   flow->detected_protocol = ndpi_detection_process_packet(workflow->ndpi_struct, ndpi_flow,
 							  iph ? (uint8_t *)iph : (uint8_t *)iph6,

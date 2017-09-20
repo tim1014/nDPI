@@ -663,24 +663,46 @@ struct ndpi_packet_struct {
 #endif
   u_int16_t protocol_stack_info;
 
-  struct ndpi_int_one_line_struct line[NDPI_MAX_PARSE_LINES_PER_PACKET];
-  struct ndpi_int_one_line_struct host_line;
-  struct ndpi_int_one_line_struct forwarded_line;
-  struct ndpi_int_one_line_struct referer_line;
-  struct ndpi_int_one_line_struct content_line;
-  struct ndpi_int_one_line_struct accept_line;
-  struct ndpi_int_one_line_struct user_agent_line;
-  struct ndpi_int_one_line_struct http_url_name;
-  struct ndpi_int_one_line_struct http_encoding;
-  struct ndpi_int_one_line_struct http_transfer_encoding;
-  struct ndpi_int_one_line_struct http_contentlen;
-  struct ndpi_int_one_line_struct http_cookie;
-  struct ndpi_int_one_line_struct http_origin;
-  struct ndpi_int_one_line_struct http_x_session_type;
-  struct ndpi_int_one_line_struct server_line;
-  struct ndpi_int_one_line_struct http_method;
-  struct ndpi_int_one_line_struct http_response;
+/* Don't change order! */
 
+#define host_line_idx (1)
+#define forwarded_line_idx (2)
+#define referer_line_idx (3)
+#define content_line_idx (4)
+#define accept_line_idx (5)
+#define user_agent_line_idx (6)
+#define http_url_name_idx (7)
+#define http_encoding_idx (8)
+#define http_transfer_encoding_idx (9)
+#define http_contentlen_idx (10)
+#define http_cookie_idx (11)
+#define http_origin_idx (12)
+#define http_x_session_type_idx (13)
+#define server_line_idx (14)
+#define http_method_idx (15)
+#define http_response_idx (16)
+#define last_hdr_idx (17)
+
+  struct ndpi_int_one_line_struct line[NDPI_MAX_PARSE_LINES_PER_PACKET];
+  struct ndpi_int_one_line_struct null_line,
+                                  host_line,
+                                  forwarded_line,
+                                  referer_line,
+                                  content_line,
+                                  accept_line,
+                                  user_agent_line,
+                                  http_url_name,
+                                  http_encoding,
+                                  http_transfer_encoding,
+                                  http_contentlen,
+                                  http_cookie,
+                                  http_origin,
+                                  http_x_session_type,
+                                  server_line,
+                                  http_method,
+                                  http_response;
+  struct ndpi_int_one_line_struct *hdr_line;
+/* !!!! */
   u_int16_t l3_packet_len;
   u_int16_t l4_packet_len;
   u_int16_t payload_packet_len;
@@ -986,6 +1008,7 @@ struct ndpi_flow_struct {
   u_int16_t packet_direction_counter[2];
   u_int16_t byte_counter[2];
 #ifdef NDPI_PROTOCOL_BITTORRENT
+  u_int32_t bittorrent_seq;
   u_int8_t bittorrent_stage;		      // can be 0 - 255
 #endif
 #ifdef NDPI_PROTOCOL_DIRECTCONNECT
