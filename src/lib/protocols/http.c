@@ -354,9 +354,9 @@ static void check_content_type_and_change_protocol(struct ndpi_detection_module_
     flow->host_server_name[len] = '\0', flow->server_id = flow->dst;
 
     if(packet->forwarded_line.ptr) {
-        len = ndpi_min(packet->forwarded_line.len, sizeof(flow->protos.http.nat_ip)-1);
-        strncpy((char*)flow->protos.http.nat_ip, (char*)packet->forwarded_line.ptr, len);
-        flow->protos.http.nat_ip[len] = '\0';
+        len = ndpi_min(packet->forwarded_line.len, sizeof(flow->nat_ip)-1);
+        strncpy((char*)flow->nat_ip, (char*)packet->forwarded_line.ptr, len);
+        flow->nat_ip[len] = '\0';
     }
 
     if(ndpi_struct->http_dont_dissect_response)
